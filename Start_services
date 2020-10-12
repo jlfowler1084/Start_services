@@ -1,0 +1,75 @@
+$ErrorActionPreference = 'Continue'
+$Date = (Get-Date -Format "yyyy-MM-dd HH.mm")
+$Time = (Get-Date -Format "dddd MM/dd/yyyy HH:mm -K")
+$Logfile = "Enter Log file here"
+
+$AderantAppServers = @('Server01',
+                       'Server02',
+                       'Server03',
+                       'Server04')
+
+$SmartTimeServers = @('Server05')
+
+$AderantAppServices = @( 
+                        'Service01'                       
+                        'Service02',
+                        'Service03',
+                        'Service04',
+                        'Service05'                                               
+                        )
+
+$SmartTimeServices = @('Service06')
+
+Write-Host "Attempting to start Aderant services and set startup type to Automatic" -ForegroundColor Green
+Add-Content $Logfile "$ENV:Username initiated StartAderantServicesProd.ps1 - Will attempt to start Aderant Services $Time"
+
+
+foreach ($AppServer in $AderantAppServers) {
+    Foreach ($AppService in $AderantAppServices){
+        $AppServerConnection = Test-Connection -ComputerName $AppServer -Count 1 -Quiet
+        IF ($AppServerConnection -eq $True ) {
+        Try {
+            Write-Host "Starting $AppService Service on $AppServer and Setting Startup Type to Automatic" -ForegroundColor Green                                
+                Set-Service -ComputerName $AppServer -Name $AppService -StartupType automatic -ErrorAction Stop
+                Start-Sleep -Seconds 5
+                Get-Service -ComputerName $Appserver -Name $AppService | Start-Service -ErrorAction Stop
+                Add-content $logfile "Started $AppService Service on $AppServer and Startup Type set to Automatic $Time"
+            } Catch {
+                write-host $error[0].Exception -ForegroundColor Red
+                Add-Content $Logfile $Error[0].Exception
+            } Finally {}
+            } Else {
+                Write-host "$AppServer Not online, unable to start $AppService" -ForegroundColor Red
+                Add-Content $Logfile "$AppServer is offline, unable to start $AppService $Time"
+            }
+        }
+    }
+           
+
+Start-Sleep -Seconds 5
+
+foreach ($SmartTimeServer in $SmartTimeServers) {
+    Foreach ($SmartTimeService in $SmartTimeServices){
+        $SmartTimeServerConnection = Test-Connection -ComputerName $SmartTimeServer -Count 1 -Quiet
+        IF ($SmartTimeServerConnection -eq $True ) {
+        Try {
+            write-host "Starting $SmartTimeService Service on $SmartTimeServer and Setting Startup Type to Automatic" -ForegroundColor Green            
+            Set-Service -ComputerName $SmartTimeServer -Name $SmartTimeService -StartupType Automatic -ErrorAction Stop
+            Get-Service -ComputerName $SmartTimeServer -Name $SmartTimeService | Start-Service -erroraction stop
+            Add-content $logfile "Started $SmartTimeService Service on $SmartTimeServer and Startup Type set to Automatic $Time"
+            } Catch {
+                write-host $error[0].Exception
+                Add-Content $Logfile $Error[0].Exception
+            } Finally {}
+            } Else {
+                Write-host "$SmartTimeServer Not online, unable to start $SmartTimeService" -ForegroundColor Red
+                Add-Content $Logfile "$SmartTimeServer is offline, unable to start $SmartTimeService $Time"
+            }
+        }
+    }
+           
+         
+ Add-Content $Logfile "Operation Complete $Time"
+ write-host "Operation Complete - Please confirm applicable services have been started with the startup type set to Automatic" -ForegroundColor Green        
+  
+  
